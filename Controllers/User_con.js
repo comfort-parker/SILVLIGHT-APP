@@ -54,9 +54,7 @@ export const register = async (req, res) => {
   }
 };
 
-// ==============================
 // VERIFY OTP
-// ==============================
 export const verifyOTP = async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -89,9 +87,7 @@ export const verifyOTP = async (req, res) => {
   }
 };
 
-// ==============================
 // LOGIN USER
-// ==============================
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -130,9 +126,7 @@ export const login = async (req, res) => {
 };
 
 
-// ==============================
 // FORGOT PASSWORD
-// ==============================
 export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -150,7 +144,7 @@ export const forgotPassword = async (req, res) => {
     user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
     await user.save();
 
-    const resetUrl = `${process.env.FRONTEND_URL}${resetToken}`;
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
     await sendPasswordResetEmail(email, resetUrl);
 
@@ -163,40 +157,41 @@ export const forgotPassword = async (req, res) => {
 
 
 // RESET PASSWORD
-
 export const resetPassword = async (req, res) => {
   try {
-    const { token } = req.query; 
+    const { token } = req.params;
     const { password } = req.body;
 
     if (!token || !password) {
-      return res.status(400).json({ message: 'Token and new password are required' });
+      return res.status(400).json({ message: "Token and new password are required" });
     }
 
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    // Hash the token from query
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
+    // Find user with matching token and check if token hasn't expired
     const user = await User.findOne({
       resetPasswordToken: hashedToken,
-      resetPasswordExpires: { $gt: new Date() },
+      resetPasswordExpires: { $gt: Date.now() },
     });
 
     if (!user) {
-      return res.status(400).json({ message: 'Invalid or expired password reset token' });
+      return res.status(400).json({ message: "Invalid or expired password reset token" });
     }
 
-    user.password = password; 
+    // Update password
+    user.password = password; // this will be hashed automatically if you have pre('save') in your User model
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
 
     await user.save();
 
-    res.json({ message: 'Password has been reset. You can now log in with your new password.' });
+    res.json({ message: "Password has been reset successfully. Please log in with your new password." });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error during password reset' });
+    console.error("Reset password error:", error);
+    res.status(500).json({ message: "Server error during password reset" });
   }
 };
-
 
 // GET USER PROFILE
 
@@ -268,4 +263,60 @@ export const deleteUserAccount = async (req, res) => {
   }
 };
 
+// GET /api/auth/users
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find().select("-password"); // don’t send passwords
+    res.json(users);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error fetching users" });
+  }
+};
 
+// GET /api/auth/users/:id
+export const getUserById = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json(user);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error fetching user" });
+  }
+};
+
+// PUT /api/auth/users/:id
+export const updateUserByAdmin = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.firstName = req.body.firstName || user.firstName;
+    user.lastName = req.body.lastName || user.lastName;
+    user.email = req.body.email || user.email;
+    user.role = req.body.role || user.role;
+    user.isVerified = req.body.isVerified ?? user.isVerified;
+
+    await user.save();
+
+    res.json({ message: "User updated successfully", user });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error updating user" });
+  }
+};
+
+// DELETE /api/auth/users/:id
+export const deleteUserByAdmin = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    await user.deleteOne();
+    res.json({ message: "User deleted successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error deleting user" });
+  }
+};

@@ -18,7 +18,7 @@ const transporter = nodemailer.createTransport({
 export const sendOtpEmail = async (toEmail, otp) => {
   try {
     const info = await transporter.sendMail({
-      from: `"MELANU SKINCARE PRODUCT" <${process.env.SMTP_USER}>`,
+      from: `"SILVLIGHT PRODUCT" <${process.env.SMTP_USER}>`,
       to: toEmail,
       subject: "Your OTP Code",
       html: `
@@ -41,7 +41,7 @@ export const sendOtpEmail = async (toEmail, otp) => {
 export const sendPasswordResetEmail = async (toEmail, resetUrl) => {
   try {
     const info = await transporter.sendMail({
-      from: `"MELANU SKINCARE PRODUCT" <${process.env.SMTP_USER}>`,
+      from: `"SILVLIGHT PRODUCT" <${process.env.SMTP_USER}>`,
       to: toEmail,
       subject: "Password Reset Request",
       html: `
@@ -57,5 +57,21 @@ export const sendPasswordResetEmail = async (toEmail, resetUrl) => {
     console.log("Password reset email sent:", info.messageId);
   } catch (error) {
     console.error("Failed to send password reset email:", error.message);
+  }
+};
+
+// ✅ 4. Send Newsletter Email (mass emails)
+export const sendNewsletterEmail = async (recipients, subject, htmlContent) => {
+  try {
+    const info = await transporter.sendMail({
+      from: `"SILVLIGHT PRODUCT" <${process.env.SMTP_USER}>`,
+      to: recipients.join(','), // Accepts an array of emails
+      subject,
+      html: htmlContent,
+    });
+
+    console.log("Newsletter email sent to:", recipients);
+  } catch (error) {
+    console.error("Failed to send newsletter email:", error.message);
   }
 };
