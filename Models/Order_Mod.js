@@ -37,10 +37,11 @@ const orderSchema = new mongoose.Schema(
 
     // Payment info
     paymentMethod: {
-      type: String,
-      enum: ["Cash", "Card", "Mobile Money"],
-      required: true,
-    },
+  type: String,
+  enum: ["cash_on_delivery", "paystack"], 
+  required: true,
+},
+
     paymentStatus: {
       type: String,
       enum: ["Pending", "Paid", "Failed"],
