@@ -150,11 +150,12 @@ export const paystackWebhook = async (req, res) => {
 
         if (order) {
           order.paymentStatus = "Paid";
-          order.status = "paid"; // make sure this is consistent with your frontend
+          order.status = "Paid";  // ✅ Will now work since enum includes "Paid"
           order.paymentMethod = "paystack";
-          order.totalAmount = amount / 100; // convert from kobo
+          order.totalAmount = amount / 100;
           await order.save();
         }
+
       }
     }
 
