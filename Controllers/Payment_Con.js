@@ -137,19 +137,21 @@ export const paystackWebhook = async (req, res) => {
       const { status, amount, metadata } = verifyResponse.data.data;
 
       if (status === "success") {
-        // Update payment & order
-        const payment = await Payment.findOneAndUpdate(
+        // Update payment
+        await Payment.findOneAndUpdate(
           { transactionId: reference },
           { status: "completed" },
           { new: true }
         );
 
-        const orderId = metadata.orderId;
+        // Update order
+        const orderId = metadata?.orderId;
         const order = await Order.findById(orderId);
 
         if (order) {
           order.paymentStatus = "Paid";
-          order.paymentMethod = "Paystack";
+          order.status = "paid"; // make sure this is consistent with your frontend
+          order.paymentMethod = "paystack";
           order.totalAmount = amount / 100; // convert from kobo
           await order.save();
         }
@@ -161,15 +163,8 @@ export const paystackWebhook = async (req, res) => {
     console.error("Webhook error:", error.message);
     res.status(500).send("Server error");
   }
-
-  await Notification.create({
-  user: order.user,
-  title: "Payment Successful",
-  message: `Your payment for order #${order._id} has been confirmed.`,
-  type: "payment",
-});
-
 };
+
 
 // 4. User payments
 export const getUserPayments = async (req, res) => {
