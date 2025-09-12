@@ -2,11 +2,14 @@ import { Payment } from "../Models/Payment_Mod.js";
 import dotenv from "dotenv";
 import { Order } from "../Models/Order_Mod.js";
 import axios from "axios";
-import crypto from "crypto"; 
+import crypto from "crypto";
 
 dotenv.config();
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
-// 1. Initiate Payment
+
+/**
+ * 1. Initiate Payment
+ */
 export const initiatePayment = async (req, res) => {
   try {
     const { orderId, method } = req.body;
@@ -39,7 +42,7 @@ export const initiatePayment = async (req, res) => {
         },
         {
           headers: {
-            Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+            Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
             "Content-Type": "application/json",
           },
         }
@@ -66,7 +69,9 @@ export const initiatePayment = async (req, res) => {
   }
 };
 
-// 2. Manual Verification (Fallback)
+/**
+ * 2. Manual Verification (Fallback)
+ */
 export const verifyPaystackPayment = async (req, res) => {
   try {
     const { reference } = req.query;
@@ -75,7 +80,7 @@ export const verifyPaystackPayment = async (req, res) => {
       `https://api.paystack.co/transaction/verify/${reference}`,
       {
         headers: {
-          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+          Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
         },
       }
     );
@@ -89,9 +94,9 @@ export const verifyPaystackPayment = async (req, res) => {
 
       if (payment) {
         await Order.findByIdAndUpdate(payment.order, {
-          status: "paid",
-          paymentStatus: "Paid",
-          paymentMethod: "Paystack",
+          paymentStatus: "Paid",       // ✅ valid enum
+          paymentMethod: "paystack",   // ✅ lowercase
+          status: "Pending",           // ✅ valid order flow enum
         });
       }
 
@@ -105,10 +110,12 @@ export const verifyPaystackPayment = async (req, res) => {
   }
 };
 
-// 3. Paystack Webhook (Auto)
+/**
+ * 3. Paystack Webhook (Auto)
+ */
 export const paystackWebhook = async (req, res) => {
   try {
-    const secret = process.env.PAYSTACK_SECRET_KEY;
+    const secret = PAYSTACK_SECRET_KEY;
     const hash = crypto
       .createHmac("sha512", secret)
       .update(JSON.stringify(req.body))
@@ -149,13 +156,12 @@ export const paystackWebhook = async (req, res) => {
         const order = await Order.findById(orderId);
 
         if (order) {
-          order.paymentStatus = "Paid";
-          order.status = "Paid";  // ✅ Will now work since enum includes "Paid"
-          order.paymentMethod = "paystack";
+          order.paymentStatus = "Paid";     // ✅ correct
+          order.paymentMethod = "paystack"; // ✅ lowercase
+          order.status = "Pending";         // ✅ valid enum
           order.totalAmount = amount / 100;
           await order.save();
         }
-
       }
     }
 
@@ -166,8 +172,9 @@ export const paystackWebhook = async (req, res) => {
   }
 };
 
-
-// 4. User payments
+/**
+ * 4. User payments
+ */
 export const getUserPayments = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -179,7 +186,9 @@ export const getUserPayments = async (req, res) => {
   }
 };
 
-// 5. Admin: All payments
+/**
+ * 5. Admin: All payments
+ */
 export const getAllPayments = async (req, res) => {
   try {
     const payments = await Payment.find()
