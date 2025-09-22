@@ -22,7 +22,7 @@ const paymentSchema = new mongoose.Schema(
       enum: ["pending", "completed", "failed"],
       default: "pending",
     },
-    transactionId: { type: String }, // From Paystack response
+    transactionId: { type: String }, 
     amount: { type: Number, required: true },
   },
   { timestamps: true }
