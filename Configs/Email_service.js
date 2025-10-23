@@ -1,20 +1,32 @@
-import nodemailer from 'nodemailer';
-import dotenv from 'dotenv';
+// 📩 emailService.js
+import nodemailer from "nodemailer";
+import dotenv from "dotenv";
 
 dotenv.config();
 
-// ✅ 1. Create the transporter once and reuse it
+// 🧭 Debug: Confirm environment variables are loaded
+console.log("SMTP_USER:", process.env.SMTP_USER);
+console.log("SMTP_PASS:", process.env.SMTP_PASS ? "✅ Loaded" : "❌ Not Loaded");
+
+// ✅ 1. Create transporter
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true, // true for SSL
+  service: "gmail", // simpler than using host/port manually
   auth: {
     user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
+    pass: process.env.SMTP_PASS, // this must be an APP PASSWORD
   },
 });
 
-// ✅ 2. Send OTP Email
+// ✅ 2. Verify transporter
+transporter.verify((error, success) => {
+  if (error) {
+    console.error("❌ Email transporter error:", error);
+  } else {
+    console.log("✅ Email transporter is ready to send messages");
+  }
+});
+
+// ✅ 3. Send OTP Email
 export const sendOtpEmail = async (toEmail, otp) => {
   try {
     const info = await transporter.sendMail({
@@ -31,13 +43,15 @@ export const sendOtpEmail = async (toEmail, otp) => {
       `,
     });
 
-    console.log("OTP email sent:", info.messageId);
+    console.log("✅ OTP email sent successfully!");
+    console.log("📨 Message ID:", info.messageId);
+    console.log("📬 Full response:", info);
   } catch (error) {
-    console.error("Failed to send OTP email:", error.message);
+    console.error("❌ Failed to send OTP email:", error);
   }
 };
 
-// ✅ 3. Send Password Reset Email
+// ✅ 4. Send Password Reset Email
 export const sendPasswordResetEmail = async (toEmail, resetUrl) => {
   try {
     const info = await transporter.sendMail({
@@ -54,24 +68,28 @@ export const sendPasswordResetEmail = async (toEmail, resetUrl) => {
       `,
     });
 
-    console.log("Password reset email sent:", info.messageId);
+    console.log("✅ Password reset email sent successfully!");
+    console.log("📨 Message ID:", info.messageId);
+    console.log("📬 Full response:", info);
   } catch (error) {
-    console.error("Failed to send password reset email:", error.message);
+    console.error("❌ Failed to send password reset email:", error);
   }
 };
 
-// ✅ 4. Send Newsletter Email (mass emails)
+// ✅ 5. Send Newsletter Email
 export const sendNewsletterEmail = async (recipients, subject, htmlContent) => {
   try {
     const info = await transporter.sendMail({
       from: `"SILVLIGHT PRODUCT" <${process.env.SMTP_USER}>`,
-      to: recipients.join(','), // Accepts an array of emails
+      to: recipients.join(","),
       subject,
       html: htmlContent,
     });
 
-    console.log("Newsletter email sent to:", recipients);
+    console.log("✅ Newsletter email sent to:", recipients);
+    console.log("📨 Message ID:", info.messageId);
+    console.log("📬 Full response:", info);
   } catch (error) {
-    console.error("Failed to send newsletter email:", error.message);
+    console.error("❌ Failed to send newsletter email:", error);
   }
 };
