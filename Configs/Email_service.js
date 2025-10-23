@@ -10,10 +10,10 @@ console.log("SMTP_PASS:", process.env.SMTP_PASS ? "✅ Loaded" : "❌ Not Loaded
 
 // ✅ 1. Create transporter
 const transporter = nodemailer.createTransport({
-  service: "gmail", // simpler than using host/port manually
+  service: "gmail", 
   auth: {
     user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS, // this must be an APP PASSWORD
+    pass: process.env.SMTP_PASS, 
   },
 });
 
