@@ -88,8 +88,8 @@ export const sendEmail = async (to, subject, htmlContent) => {
       console.error("SendGrid Error Code:", error.code);
     }
 
-    throw new Error("Email delivery failed");
-  }
+    throw new Error("Fail to send email");
+   }
 };
 
 // ==========================
