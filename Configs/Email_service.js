@@ -1,95 +1,108 @@
 // 📩 emailService.js
-import nodemailer from "nodemailer";
+import sgMail from "@sendgrid/mail";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-// 🧭 Debug: Confirm environment variables are loaded
-console.log("SMTP_USER:", process.env.SMTP_USER);
-console.log("SMTP_PASS:", process.env.SMTP_PASS ? "✅ Loaded" : "❌ Not Loaded");
+// ==========================
+// 🔐 Load & Validate API Key
+// ==========================
+if (!process.env.SENDGRID_API_KEY) {
+  console.error("❌ Missing SENDGRID_API_KEY in environment variables");
+} else {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+  console.log("✅ SendGrid API Key Loaded");
+}
 
-// ✅ 1. Create transporter
-const transporter = nodemailer.createTransport({
-  service: "gmail", 
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS, 
-  },
-});
+if (!process.env.SENDGRID_FROM_EMAIL) {
+  console.error("❌ Missing SENDGRID_FROM_EMAIL");
+}
 
-// ✅ 2. Verify transporter
-transporter.verify((error, success) => {
-  if (error) {
-    console.error("❌ Email transporter error:", error);
-  } else {
-    console.log("✅ Email transporter is ready to send messages");
-  }
-});
+// ==========================
+// 🎨 Email Templates
+// ==========================
+export const templates = {
+  otp: (otp) => `
+    <div style="font-family: Arial, sans-serif; color: #333; padding: 20px;">
+      <h2 style="color: #0b58bc;">Your OTP Code</h2>
+      <p>Use the code below to verify your account:</p>
+      <h1 style="letter-spacing: 4px; color:#0b58bc;">${otp}</h1>
+      <p style="font-size: 13px; color: #888;">This code expires in 5 minutes.</p>
+    </div>
+  `,
 
-// ✅ 3. Send OTP Email
-export const sendOtpEmail = async (toEmail, otp) => {
-  try {
-    const info = await transporter.sendMail({
-      from: `"SILVLIGHT PRODUCT" <${process.env.SMTP_USER}>`,
-      to: toEmail,
-      subject: "Your OTP Code",
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px; background: #f2f2f2;">
-          <h2 style="color: #007BFF;">Your OTP</h2>
-          <p>Use the code below to verify your account:</p>
-          <h1 style="letter-spacing: 3px;">${otp}</h1>
-          <p style="font-size: 14px; color: #777;">This OTP will expire in 5 minutes.</p>
-        </div>
-      `,
-    });
+  resetPassword: (resetUrl) => `
+    <div style="font-family: Arial, sans-serif; color: #333; padding: 20px;">
+      <h2 style="color: #0b58bc;">Reset Your Password</h2>
+      <p>Click the button below to set a new password:</p>
+      <a href="${resetUrl}" 
+         style="display:inline-block;background:#0b58bc;color:#fff;
+                padding:10px 20px;border-radius:6px;text-decoration:none;margin-top:10px;">
+        Reset Password
+      </a>
+      <p style="font-size: 13px; color: #888; margin-top:15px;">
+        If you didn’t request this, ignore this email.
+      </p>
+    </div>
+  `,
 
-    console.log("✅ OTP email sent successfully!");
-    console.log("📨 Message ID:", info.messageId);
-    console.log("📬 Full response:", info);
-  } catch (error) {
-    console.error("❌ Failed to send OTP email:", error);
-  }
+  newsletter: (content) => `
+    <div style="font-family: Arial, sans-serif; color: #333; padding: 20px;">
+      ${content}
+      <hr />
+      <p style="font-size: 12px; color: #888;">
+        SILVLIGHT PRODUCT © ${new Date().getFullYear()}
+      </p>
+    </div>
+  `,
 };
 
-// ✅ 4. Send Password Reset Email
-export const sendPasswordResetEmail = async (toEmail, resetUrl) => {
+// ==========================
+// 🚀 Base Send Email Function
+// ==========================
+export const sendEmail = async (to, subject, htmlContent) => {
   try {
-    const info = await transporter.sendMail({
-      from: `"SILVLIGHT PRODUCT" <${process.env.SMTP_USER}>`,
-      to: toEmail,
-      subject: "Password Reset Request",
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px; background: #f2f2f2;">
-          <h2 style="color: #007BFF;">Reset Your Password</h2>
-          <p>Click the link below to reset your password:</p>
-          <a href="${resetUrl}" style="color: #007BFF;">Reset Password</a>
-          <p style="font-size: 14px; color: #777;">If you did not request this, please ignore this email.</p>
-        </div>
-      `,
-    });
-
-    console.log("✅ Password reset email sent successfully!");
-    console.log("📨 Message ID:", info.messageId);
-    console.log("📬 Full response:", info);
-  } catch (error) {
-    console.error("❌ Failed to send password reset email:", error);
-  }
-};
-
-// ✅ 5. Send Newsletter Email
-export const sendNewsletterEmail = async (recipients, subject, htmlContent) => {
-  try {
-    const info = await transporter.sendMail({
-      from: `"SILVLIGHT PRODUCT" <${process.env.SMTP_USER}>`,
-      to: recipients.join(","),
+    const msg = {
+      to,
+      from: {
+        email: process.env.SENDGRID_FROM_EMAIL,
+        name: "SILVLIGHT PRODUCT",
+      },
       subject,
       html: htmlContent,
-    });
+    };
 
-    console.log("✅ Newsletter email sent to:", recipients);
-    console.log("📨 Message ID:", info.messageId);
-    console.log("📬 Full response:", info);
+    await sgMail.send(msg);
+    console.log(`📨 Email sent successfully to ${to}`);
   } catch (error) {
-    console.error("❌ Failed to send newsletter email:", error);
+    console.error("❌ Email sending failed:", error.message);
+
+    if (error.response?.body?.errors) {
+      console.error(
+        "SendGrid API Errors:",
+        JSON.stringify(error.response.body.errors, null, 2)
+      );
+    }
+
+    if (error.code) {
+      console.error("SendGrid Error Code:", error.code);
+    }
+
+    throw new Error("Email delivery failed");
   }
+};
+
+// ==========================
+// 📮 Specific Email Functions
+// ==========================
+export const sendOtpEmail = async (email, otp) => {
+  return sendEmail(email, "Your OTP Code", templates.otp(otp));
+};
+
+export const sendPasswordResetEmail = async (email, resetUrl) => {
+  return sendEmail(email, "Password Reset Request", templates.resetPassword(resetUrl));
+};
+
+export const sendNewsletterEmail = async (recipients, subject, content) => {
+  return sendEmail(recipients, subject, templates.newsletter(content));
 };

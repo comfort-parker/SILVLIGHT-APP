@@ -2,7 +2,8 @@ import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 import { User } from '../Models/User_mod.js';
 import generateToken from '../Configs/Token.js';
-import { sendOtpEmail, sendPasswordResetEmail} from '../Configs/Email_service.js';
+import { sendEmail, templates } from "../Configs/Email_service.js";
+
 
 // ==============================
 // Helper to generate OTP
@@ -43,7 +44,12 @@ export const register = async (req, res) => {
     });
 
     // Send OTP Email using your dedicated function
-    await sendOtpEmail(email, otp);
+        await sendEmail(
+      email,
+      "Your OTP Code",
+      templates.sendOtpTemplate(otp)
+    );
+
 
     res.status(201).json({
       message: 'Registration successful. Please verify your email with the OTP sent.',
