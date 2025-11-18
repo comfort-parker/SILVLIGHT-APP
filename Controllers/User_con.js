@@ -47,7 +47,7 @@ export const register = async (req, res) => {
         await sendEmail(
       email,
       "Your OTP Code",
-      templates.sendOtpTemplate(otp)
+      templates.otp(otp)
     );
 
 
